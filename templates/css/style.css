@@ -1,0 +1,53 @@
+body {
+    margin: 0;
+    padding: 0;
+    font-family: 'Courier New', Courier, monospace;
+}
+
+ul {
+    list-style: none;
+}
+
+.container {
+    max-width: 1170px;
+    padding: 0 15px;
+    margin: 0 auto;
+}
+
+.search-form {
+    display: flex;
+    gap: 10px;
+}
+
+.title {
+    box-sizing: border-box;
+    padding: 30px 20px 20px 0;
+    height: 65px;
+    background-color: rgb(143, 42, 154);
+}
+
+.title__text {
+    margin: 0;
+    color: #fff;
+    text-align: center;
+}
+
+.main-orderuid {
+    display: block;
+    border: 1px solid #ced4da;
+    border-radius: .25rem;
+    height: calc(2.8rem + 2px);
+    font-size: 1rem;
+    width: 300px;
+    padding-left: 25px;
+}
+
+.main-search {
+    background-color: rgb(143, 42, 154);
+    border: none;
+    border-radius: 10%;
+    color: #fff;
+    cursor: pointer;
+    width: 70px;
+    font-size: 15px;
+}

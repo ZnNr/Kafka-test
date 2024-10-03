@@ -7,6 +7,26 @@ import (
 	"github.com/ZnNr/WB-test-L0/internal/models"
 	"github.com/ZnNr/WB-test-L0/internal/repository/config"
 	"github.com/ZnNr/WB-test-L0/internal/repository/database"
+	_ "github.com/lib/pq"
+)
+
+const (
+	addOrderQuery = `INSERT INTO orders("order_uid",
+                   "track_number",
+                   "entry",
+                   "locale",
+                   "internal_signature",
+                   "customer_id",
+                   "delivery_service",
+                   "shardkey",
+                   "sm_id",
+                   "date_created",
+                   "oof_shard")
+VALUES($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`
+
+	getOrderQuery = "SELECT order_uid, track_number, entry, delivery, payment, items, locale, internal_signature, customer_id, delivery_service, shardkey, sm_id, date_created, oof_shard FROM orders WHERE order_uid = $1"
+
+	getAllOrdersQuery = "SELECT * FROM orders"
 )
 
 type OrdersRepo struct {
@@ -25,82 +45,119 @@ func New(cfg *config.Config) (*OrdersRepo, error) {
 
 	db, err := sql.Open("postgres", connStr)
 	if err != nil {
-		return nil, fmt.Errorf("database connection error: %w", err)
+		return nil, err
 	}
 
 	if err := db.Ping(); err != nil {
-		return nil, fmt.Errorf("database ping error: %w", err)
+		db.Close()
+		return nil, err
 	}
 
 	return &OrdersRepo{DB: db}, nil
 }
+
 func (o *OrdersRepo) AddOrder(order models.Order) error {
 	tx, err := o.DB.Begin()
 	if err != nil {
 		return fmt.Errorf("failed to begin transaction: %w", err)
 	}
-	defer tx.Rollback()
 
-	query := `INSERT INTO orders(order_uid, track_number, entry, locale, internal_signature, customer_id, delivery_service, shardkey, sm_id, date_created, oof_shard) 
-    VALUES($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`
-
-	_, err = tx.Exec(
-		query,
-		order.OrderUID, order.TrackNumber, order.Entry, order.Locale, order.InternalSignature, order.CustomerID,
-		order.DeliveryService, order.Shardkey, order.SmID, order.DateCreated, order.OofShard,
+	_, err = o.DB.Exec(
+		addOrderQuery,
+		order.OrderUID,
+		order.TrackNumber,
+		order.Entry,
+		order.Locale,
+		order.InternalSignature,
+		order.CustomerID,
+		order.DeliveryService,
+		order.Shardkey,
+		order.SmID,
+		order.DateCreated,
+		order.OofShard,
 	)
 	if err != nil {
+		tx.Rollback()
 		return fmt.Errorf("failed to insert order: %w", err)
 	}
 
-	if err := database.AddPayment(tx, order.Payment, order.OrderUID); err != nil {
+	err = database.AddPayment(tx, order.Payment, order.OrderUID)
+	if err != nil {
+		tx.Rollback()
 		return fmt.Errorf("failed to insert payment: %w", err)
 	}
 
-	if err := database.AddItems(tx, order.Items, order.OrderUID); err != nil {
+	err = database.AddItems(tx, order.Items, order.OrderUID)
+	if err != nil {
+		tx.Rollback()
 		return fmt.Errorf("failed to insert items: %w", err)
 	}
 
-	if err := database.AddDelivery(tx, order.Delivery, order.OrderUID); err != nil {
+	err = database.AddDelivery(tx, order.Delivery, order.OrderUID)
+	if err != nil {
+		tx.Rollback()
 		return fmt.Errorf("failed to insert delivery: %w", err)
 	}
 
-	return tx.Commit()
+	err = tx.Commit()
+	if err != nil {
+		return fmt.Errorf("failed to commit transaction: %w", err)
+	}
+
+	return nil
 }
 
-func (o *OrdersRepo) GetOrder(orderUID string) (*models.Order, error) {
-	query := "SELECT order_uid, track_number, entry, locale, internal_signature, customer_id, delivery_service, shardkey, sm_id, date_created, oof_shard FROM orders WHERE order_uid = $1"
-	row := o.DB.QueryRow(query, orderUID)
+func (o *OrdersRepo) GetOrder(OrderUID string) (*models.Order, error) {
 
+	row := o.DB.QueryRow(getOrderQuery, OrderUID)
 	var order models.Order
-	err := row.Scan(&order.OrderUID, &order.TrackNumber, &order.Entry, &order.Locale, &order.InternalSignature,
-		&order.CustomerID, &order.DeliveryService, &order.Shardkey, &order.SmID, &order.DateCreated, &order.OofShard)
-
+	err := row.Scan(
+		&order.OrderUID,
+		&order.TrackNumber,
+		&order.Entry,
+		&order.Locale,
+		&order.InternalSignature,
+		&order.CustomerID,
+		&order.DeliveryService,
+		&order.Shardkey,
+		&order.SmID,
+		&order.DateCreated,
+		&order.OofShard,
+	)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, nil
 		}
-		return nil, fmt.Errorf("failed to get order: %w", err)
+		return nil, fmt.Errorf("failed to get orders: %w", err)
 	}
+	delivery, err := database.GetDelivery(o.DB, OrderUID)
+	if err != nil {
+		return nil, err
+	}
+	order.Delivery = *delivery
 
-	if order.Delivery, err = database.GetDelivery(o.DB, orderUID); err != nil {
-		return nil, fmt.Errorf("failed to get delivery: %w", err)
+	payment, err := database.GetPayment(o.DB, OrderUID)
+	if err != nil {
+		return nil, err
 	}
+	order.Payment = *payment
 
-	if order.Payment, err = database.GetPayment(o.DB, orderUID); err != nil {
-		return nil, fmt.Errorf("failed to get payment: %w", err)
+	items, err := database.GetItems(o.DB, OrderUID)
+	if err != nil {
+		return nil, err
 	}
-
-	if order.Items, err = database.GetItems(o.DB, orderUID); err != nil {
-		return nil, fmt.Errorf("failed to get items: %w", err)
-	}
+	order.Items = items
 
 	return &order, nil
 }
+
 func (o *OrdersRepo) GetOrders() ([]models.Order, error) {
-	query := "SELECT order_uid, track_number, entry, locale, internal_signature, customer_id, delivery_service, shardkey, sm_id, date_created, oof_shard FROM orders"
-	rows, err := o.DB.Query(query)
+
+	rows, err := o.DB.Query(getAllOrdersQuery)
 	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, nil
+		}
 		return nil, fmt.Errorf("failed to get orders: %w", err)
 	}
 	defer rows.Close()
@@ -108,24 +165,31 @@ func (o *OrdersRepo) GetOrders() ([]models.Order, error) {
 	var orders []models.Order
 	for rows.Next() {
 		var order models.Order
-		if err := rows.Scan(&order.OrderUID, &order.TrackNumber, &order.Entry, &order.Locale, &order.InternalSignature, &order.CustomerID,
-			&order.DeliveryService, &order.Shardkey, &order.SmID, &order.DateCreated, &order.OofShard); err != nil {
+		err := rows.Scan(&order.OrderUID, &order.TrackNumber, &order.Entry, &order.Locale, &order.InternalSignature, &order.CustomerID, &order.DeliveryService, &order.Shardkey, &order.SmID, &order.DateCreated, &order.OofShard)
+		if err != nil {
 			return nil, fmt.Errorf("failed to scan order row: %w", err)
 		}
 
-		if order.Delivery, err = database.GetDelivery(o.DB, order.OrderUID); err != nil {
+		delivery, err := database.GetDelivery(o.DB, order.OrderUID)
+		if err != nil {
 			return nil, fmt.Errorf("failed to get delivery for order %s: %w", order.OrderUID, err)
 		}
+		order.Delivery = *delivery
 
-		if order.Payment, err = database.GetPayment(o.DB, order.OrderUID); err != nil {
+		payment, err := database.GetPayment(o.DB, order.OrderUID)
+		if err != nil {
 			return nil, fmt.Errorf("failed to get payment for order %s: %w", order.OrderUID, err)
 		}
+		order.Payment = *payment
 
-		if order.Items, err = database.GetItems(o.DB, order.OrderUID); err != nil {
+		items, err := database.GetItems(o.DB, order.OrderUID)
+		if err != nil {
 			return nil, fmt.Errorf("failed to get items for order %s: %w", order.OrderUID, err)
 		}
+		order.Items = items
 
 		orders = append(orders, order)
 	}
+
 	return orders, nil
 }

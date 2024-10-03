@@ -3,20 +3,22 @@ package database
 import (
 	"database/sql"
 	"errors"
+	"fmt"
 	"github.com/ZnNr/WB-test-L0/internal/models"
-	"log"
 )
 
-// AddPayment добавляет информацию об оплате в базу данных.
-func AddPayment(tx *sql.Tx, payment models.Payment, orderUID string) error {
-	query := `INSERT INTO payments 
-        ("transaction", "request_id", "currency", "provider", "amount", 
-        "payment_dt", "bank", "delivery_cost", "goods_total", "custom_fee", "order_uid") 
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`
+const (
+	getPaymentQuery = "SELECT *  FROM payments WHERE order_uid = $1"
+	addPaymentQuery = `INSERT INTO payments
+("transaction", "request_id", "currency", "provider", "amount",
+"payment_dt", "bank", "delivery_cost", "goods_total", "custom_fee", "order_uid")
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`
+)
 
-	// Выполнение SQL запроса и обработка ошибок.
-	if _, err := tx.Exec(
-		query,
+func AddPayment(tx *sql.Tx, payment models.Payment, OrderUID string) error {
+
+	_, err := tx.Exec(
+		addPaymentQuery,
 		payment.Transaction,
 		payment.RequestID,
 		payment.Currency,
@@ -27,22 +29,19 @@ func AddPayment(tx *sql.Tx, payment models.Payment, orderUID string) error {
 		payment.DeliveryCost,
 		payment.GoodsTotal,
 		payment.CustomFee,
-		orderUID,
-	); err != nil {
-		log.Printf("failed to add payment to database, Transaction:  %s, error: %v", payment.Transaction, err)
+		OrderUID,
+	)
+	if err != nil {
+		return err
 	}
-	log.Printf("Successfully added payment to the database, transaction: %s", payment.Transaction)
 	return nil
 }
 
-// GetPayment извлекает информацию об оплате из базы данных по UID заказа.
-func GetPayment(db *sql.DB, orderUID string) (*models.Payment, error) {
-	query := "SELECT * FROM payments WHERE order_uid = $1"
-	row := db.QueryRow(query, orderUID)
+func GetPayment(db *sql.DB, OrderUID string) (*models.Payment, error) {
+
+	row := db.QueryRow(getPaymentQuery, OrderUID)
 	var payment models.Payment
 	var uid string
-
-	// Извлечение данных из строки результата и обработка ошибок.
 	err := row.Scan(
 		&uid,
 		&payment.Transaction,
@@ -58,11 +57,9 @@ func GetPayment(db *sql.DB, orderUID string) (*models.Payment, error) {
 	)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			log.Printf("Payment not found for order UID: %s", orderUID)
-			return nil, nil
+			return nil, fmt.Errorf("payment not found: %w", err)
 		}
-		log.Printf("Get payment failed for order UID: %s, error: %v", orderUID, err)
-		return nil, err
+		return nil, fmt.Errorf("get payment failed: %w", err)
 	}
 	return &payment, nil
 }

@@ -6,8 +6,9 @@ import (
 )
 
 type Config struct {
-	DB  ConfigDB  `yaml:"db"`
-	App ConfigApp `yaml:"app"`
+	DB    ConfigDB    `yaml:"db"`
+	App   ConfigApp   `yaml:"app"`
+	Kafka KafkaConfig `yaml:"kafka"`
 }
 
 type ConfigApp struct {
@@ -21,6 +22,11 @@ type ConfigDB struct {
 	Name     string `yaml:"name"`
 	User     string `yaml:"user"`
 	Password string `yaml:"password"`
+}
+
+type KafkaConfig struct {
+	Brokers []string `yaml:"brokers"`
+	Topic   string   `yaml:"topic"`
 }
 
 func Load(cfgPath string) (*Config, error) {
