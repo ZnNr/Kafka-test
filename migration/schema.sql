@@ -18,7 +18,7 @@ CREATE TABLE IF NOT EXISTS orders
 --Таблица доставки (deliveries)
 CREATE TABLE IF NOT EXISTS deliveries
 (
-    order_uid VARCHAR(255) PRIMARY KEY NOT NULL REFERENCES orders (order_uid) ON DELETE CASCADE,
+    order_uid     VARCHAR(255) PRIMARY KEY NOT NULL REFERENCES orders (order_uid) ON DELETE CASCADE,
     name      VARCHAR(255),
     phone     VARCHAR(50),
     zip       VARCHAR(20),
@@ -28,7 +28,7 @@ CREATE TABLE IF NOT EXISTS deliveries
     email     VARCHAR(100)
 
 );
-DROP TABLE IF EXISTS items;
+
 --Таблица платежа (payments)
 CREATE TABLE IF NOT EXISTS payments
 (
@@ -62,3 +62,5 @@ CREATE TABLE IF NOT EXISTS items
     brand        VARCHAR(100),
     status       INTEGER
 );
+
+SELECT order_uid, name, phone, zip, city, address, region, email FROM deliveries WHERE order_uid = '811921f9-30c4-456c-b786-1aed9dcfce42';

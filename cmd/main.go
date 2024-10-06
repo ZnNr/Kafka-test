@@ -3,7 +3,7 @@ package main
 import (
 	"context"
 	"github.com/ZnNr/WB-test-L0/internal/cache"
-	"github.com/ZnNr/WB-test-L0/internal/controller"
+	"github.com/ZnNr/WB-test-L0/internal/controller/server"
 	"github.com/ZnNr/WB-test-L0/internal/repository"
 	"github.com/ZnNr/WB-test-L0/internal/repository/config"
 	"github.com/ZnNr/WB-test-L0/kafka/consumer"
@@ -99,8 +99,8 @@ func initializeCache(ordersRepo *repository.OrdersRepo, logger *zap.Logger) *cac
 	return appCache
 }
 
-func initializeController(cfgPath string, cache *cache.Cache, logger *zap.Logger) *controller.Server {
-	server, err := controller.New(cfgPath, cache)
+func initializeController(cfgPath string, cache *cache.Cache, logger *zap.Logger) *server.Server {
+	server, err := server.New(cfgPath, cache)
 	if err != nil {
 		logger.Fatal("Controller initialization error", zap.Error(err))
 	}
@@ -108,7 +108,8 @@ func initializeController(cfgPath string, cache *cache.Cache, logger *zap.Logger
 	return server
 }
 
-func startServer(server *controller.Server, logger *zap.Logger) {
+func startServer(server *server.Server, logger *zap.Logger) {
+
 	go func() {
 		if err := server.Launch(); err != nil {
 			logger.Fatal("Server error", zap.Error(err))

@@ -1,53 +1,52 @@
 body {
+    font-family: Arial, sans-serif;
     margin: 0;
     padding: 0;
-    font-family: 'Courier New', Courier, monospace;
-}
-
-ul {
-    list-style: none;
+    background-color: #f8f0f8; /* светлый розовый */
 }
 
 .container {
-    max-width: 1170px;
-    padding: 0 15px;
-    margin: 0 auto;
-}
-
-.search-form {
-    display: flex;
-    gap: 10px;
+    max-width: 600px;
+    margin: 100px auto;
+    padding: 20px;
+    border: 2px solid #ff69b4; /* ярко-розовый */
+    border-radius: 10px;
+    background-color: #ffffff; /* белый */
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
 }
 
 .title {
-    box-sizing: border-box;
-    padding: 30px 20px 20px 0;
-    height: 65px;
-    background-color: rgb(143, 42, 154);
-}
-
-.title__text {
-    margin: 0;
-    color: #fff;
     text-align: center;
+    color: #d5006d; /* темно-розовый */
 }
 
 .main-orderuid {
-    display: block;
-    border: 1px solid #ced4da;
-    border-radius: .25rem;
-    height: calc(2.8rem + 2px);
-    font-size: 1rem;
-    width: 300px;
-    padding-left: 25px;
+    width: 100%;
+    padding: 10px;
+    margin: 20px 0;
+    border: 2px solid #ff69b4; /* ярко-розовый */
+    border-radius: 5px;
 }
 
 .main-search {
-    background-color: rgb(143, 42, 154);
+    width: 100%;
+    padding: 10px;
+    background-color: #ff69b4; /* ярко-розовый */
+    color: #ffffff; /* белый текст */
     border: none;
-    border-radius: 10%;
-    color: #fff;
+    border-radius: 5px;
     cursor: pointer;
-    width: 70px;
-    font-size: 15px;
+    font-size: 16px;
+}
+
+.main-search:hover {
+    background-color: #d5006d; /* темно-розовый */
+}
+
+pre {
+    background-color: #f0f8ff; /* светлый фон для JSON */
+    padding: 15px;
+    border-radius: 5px;
+    border: 1px solid #ff69b4; /* ярко-розовый */
+    overflow-x: auto;
 }

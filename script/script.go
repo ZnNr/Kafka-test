@@ -3,6 +3,7 @@ package script
 import (
 	"fmt"
 	"github.com/ZnNr/WB-test-L0/internal/models"
+	"github.com/google/uuid"
 	"math/rand"
 	"time"
 )
@@ -15,7 +16,7 @@ func GenerateOrder() models.Order {
 		City:    randomString(8),
 		Address: randomString(15),
 		Region:  randomString(8),
-		Email:   randomString(5),
+		Email:   randomString(5) + "@example.com",
 	}
 	item := models.Item{
 		ChrtID:      rand.Intn(1000),
@@ -35,8 +36,8 @@ func GenerateOrder() models.Order {
 	currency := currencies[rand.Intn(len(currencies))]
 
 	payment := models.Payment{
-		Transaction:  randomString(10),
-		RequestID:    randomString(8),
+		Transaction:  uuid.New().String(), // Генерируем уникальный идентификатор
+		RequestID:    uuid.New().String(), // Генерируем уникальный идентификатор
 		Currency:     currency,
 		Provider:     randomString(6),
 		Amount:       float64(rand.Intn(10000)),
@@ -50,7 +51,7 @@ func GenerateOrder() models.Order {
 	localies := []string{"en", "ru"}
 	locale := localies[rand.Intn(len(localies))]
 	order := models.Order{
-		OrderUID:          randomString(12),
+		OrderUID:          uuid.New().String(), // Используем UUID для OrderUID
 		TrackNumber:       randomString(10),
 		Entry:             randomString(5),
 		Delivery:          delivery,
@@ -79,7 +80,7 @@ func randomString(length int) string {
 
 // Функция для генерации случайного номера телефона
 func randomPhone() string {
-	return fmt.Sprintf("+1%010d", rand.Int63n(10000000000))
+	return fmt.Sprintf("+7%010d", rand.Int63n(10000000000))
 }
 
 // Функция для генерации случайного ZIP-кода
@@ -89,6 +90,6 @@ func randomZip() string {
 
 // Функция для генерации случайного размера
 func randomSize() string {
-	sizes := []string{"S", "M", "L", "XL", "XXL"}
+	sizes := []string{"XS", "S", "M", "L", "XL", "XXL", "XXXL"}
 	return sizes[rand.Intn(len(sizes))]
 }
