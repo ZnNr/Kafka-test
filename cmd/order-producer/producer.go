@@ -34,15 +34,6 @@ func main() {
 			log.Fatalf("Failed to close database connection: %v", err)
 		}
 	}()
-
-	// Получаем старые заказы
-	orders, err := ordersRepo.GetOrders()
-	if err != nil {
-		log.Fatalf("Failed to get old orders from DB: %v", err)
-	}
-	// Логи загруженных заказов
-	log.Printf("Loaded %d orders from the database", len(orders))
-	// Подключаемся к Kafka
 	brokers := cfg.Kafka.Brokers // Предполагаем, что конфигурация содержит список брокеров
 	producer, err := ConnectProducer(brokers)
 	if err != nil {
@@ -55,6 +46,14 @@ func main() {
 	}()
 
 	log.Println("Producer is launched!")
+	// Получаем старые заказы
+	orders, err := ordersRepo.GetOrders()
+	if err != nil {
+		log.Fatalf("Failed to get old orders from DB: %v", err)
+	}
+	// Логи загруженных заказов
+	log.Printf("Loaded %d orders from the database", len(orders))
+	// Подключаемся к Kafka
 
 	// Основной цикл ввода
 	for {
