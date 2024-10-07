@@ -9,7 +9,7 @@
     <style>
         body {
             font-family: Arial, sans-serif;
-            background-color: #f4f4f4;
+            background-color: #ffebee; /* Светло-розовый фон */
             margin: 0;
             padding: 20px;
         }
@@ -17,7 +17,7 @@
         .container {
             max-width: 600px;
             margin: auto;
-            background: #fff;
+            background: #ffffff; /* Белый фон для контейнера */
             padding: 20px;
             border-radius: 8px;
             box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
@@ -26,47 +26,48 @@
         .title {
             text-align: center;
             margin-bottom: 20px;
+            color: #d5006d; /* Темно-розовый цвет заголовка */
         }
 
         .main-orderuid {
             width: calc(100% - 130px);
             padding: 10px;
             margin-right: 10px;
-            border: 1px solid #ccc;
+            border: 1px solid #f48fb1; /* Розовая рамка */
             border-radius: 4px;
             outline: none;
             transition: border-color 0.3s;
         }
 
         .main-orderuid:focus {
-            border-color: #5cb85c;
+            border-color: #d5006d; /* Тёмно-розовая рамка при фокусе */
         }
 
         .main-search {
             padding: 10px 20px;
             border: none;
             border-radius: 4px;
-            background-color: #5cb85c;
-            color: #fff;
+            background-color: #d5006d; /* Тёмно-розовая кнопка */
+            color: #ffffff;
             cursor: pointer;
             transition: background-color 0.3s;
         }
 
         .main-search:hover {
-            background-color: #4cae4c;
+            background-color: #c51162; /* Темно-розовый при наведении */
         }
 
         .result {
             display: none;
             margin-top: 20px;
             padding: 15px;
-            border: 1px solid #ccc;
+            border: 1px solid #f1a7b4; /* Светло-розовая рамка результата */
             border-radius: 4px;
-            background-color: #e9ecef;
+            background-color: #fce4ec; /* Супер светлый розовый фон */
         }
 
         .item {
-            border-bottom: 1px solid #ddd;
+            border-bottom: 1px solid #f50057; /* Светло-розовая граница */
             padding: 10px 0;
         }
 
@@ -116,7 +117,7 @@
         const form = event.target;
         const orderUid = form.order_uid.value;
 
-        fetch(`http://localhost:8082/order/${orderUid}`)
+        fetch(`http://localhost:8080/order/${orderUid}`)
             .then(response => {
                 if (!response.ok) {
                     throw new Error('Сервер вернул ошибку');
