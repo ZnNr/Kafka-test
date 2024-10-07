@@ -53,3 +53,14 @@ func (c *Cache) Clear() {
 	defer c.mu.Unlock()
 	c.Orders = make(map[string]models.Order)
 }
+
+// GetAllOrders возвращает список всех заказов
+func (c *Cache) GetAllOrders() []models.Order {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	orders := make([]models.Order, 0, len(c.Orders))
+	for _, order := range c.Orders {
+		orders = append(orders, order)
+	}
+	return orders
+}

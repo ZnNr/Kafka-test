@@ -8,7 +8,18 @@ import (
 )
 
 const (
-	getPaymentQuery = "SELECT \"transaction\", \"request_id\", \"currency\", \"provider\", \"amount\", \"payment_dt\", \"bank\", \"delivery_cost\", \"goods_total\", \"custom_fee\" FROM payments WHERE order_uid = $1"
+	getPaymentQuery = `SELECT 
+    "transaction", 
+    "request_id", 
+    "currency", 
+    "provider", 
+    "amount", 
+    "payment_dt", 
+    "bank", 
+    "delivery_cost", 
+    "goods_total", 
+    "custom_fee" 
+FROM payments WHERE order_uid = $1`
 	addPaymentQuery = `INSERT INTO payments
         ("transaction", "request_id", "currency", "provider", "amount",
         "payment_dt", "bank", "delivery_cost", "goods_total", "custom_fee", "order_uid")
@@ -16,8 +27,8 @@ const (
 )
 
 // AddPayment добавляет платеж в базу данных.
-func AddPayment(tx *sql.Tx, payment models.Payment, orderUID string) error {
-	_, err := tx.Exec(
+func AddPayment(db *sql.DB, payment models.Payment, orderUID string) error {
+	_, err := db.Exec(
 		addPaymentQuery,
 		payment.Transaction,
 		payment.RequestID,
@@ -32,14 +43,14 @@ func AddPayment(tx *sql.Tx, payment models.Payment, orderUID string) error {
 		orderUID,
 	)
 	if err != nil {
-		return fmt.Errorf("не удалось добавить платеж: %w", err) // Улучшено сообщение об ошибке
+		return fmt.Errorf("failed to add payment: %w", err) // Улучшено сообщение об ошибке
 	}
 	return nil
 }
 
 // GetPayment получает платеж из базы данных по orderUID.
-func GetPayment(tx *sql.Tx, orderUID string) (*models.Payment, error) {
-	row := tx.QueryRow(getPaymentQuery, orderUID) // Используем tx
+func GetPayment(db *sql.DB, orderUID string) (*models.Payment, error) {
+	row := db.QueryRow(getPaymentQuery, orderUID) // Используем tx
 	var payment models.Payment
 
 	err := row.Scan(
@@ -56,19 +67,19 @@ func GetPayment(tx *sql.Tx, orderUID string) (*models.Payment, error) {
 	)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return nil, fmt.Errorf("платеж не найден: %w", err)
+			return nil, fmt.Errorf("payment not found: %w", err)
 		}
-		return nil, fmt.Errorf("не удалось получить платеж: %w", err)
+		return nil, fmt.Errorf("failed to receive payment: %w", err)
 	}
 	return &payment, nil
 }
 
 // PaymentExists проверяет существование платежа в базе данных по orderUID.
-func PaymentExists(tx *sql.Tx, orderUID string) (bool, error) {
+func PaymentExists(tx *sql.DB, orderUID string) (bool, error) {
 	var exists bool
 	err := tx.QueryRow("SELECT EXISTS(SELECT 1 FROM payments WHERE order_uid = $1)", orderUID).Scan(&exists)
 	if err != nil {
-		return false, fmt.Errorf("не удалось проверить существование платежа: %w", err) // Улучшено сообщение об ошибке
+		return false, fmt.Errorf("could not verify the existence of the payment: %w", err) // Улучшено сообщение об ошибке
 	}
 	return exists, nil
 }

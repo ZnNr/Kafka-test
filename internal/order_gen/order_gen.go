@@ -1,4 +1,4 @@
-package script
+package order_gen
 
 import (
 	"fmt"
@@ -9,49 +9,13 @@ import (
 )
 
 func GenerateOrder() models.Order {
-	delivery := models.Delivery{
-		Name:    randomString(10),
-		Phone:   randomPhone(),
-		Zip:     randomZip(),
-		City:    randomString(8),
-		Address: randomString(15),
-		Region:  randomString(8),
-		Email:   randomString(5) + "@example.com",
-	}
-	item := models.Item{
-		ChrtID:      rand.Intn(1000),
-		TrackNumber: randomString(10),
-		Price:       float64(rand.Intn(1000)),
-		Rid:         randomString(6),
-		Name:        randomString(10),
-		Sale:        float64(rand.Intn(100)),
-		Size:        randomSize(),
-		TotalPrice:  float64(rand.Intn(1000)),
-		NmID:        rand.Intn(1000),
-		Brand:       randomString(8),
-		Status:      rand.Intn(5),
-	}
+	delivery := generateDelivery()
+	item := generateItem()
+	payment := generatePayment()
+	locale := generateLocale()
 
-	currencies := []string{"USD", "RUB", "EUR"}
-	currency := currencies[rand.Intn(len(currencies))]
-
-	payment := models.Payment{
-		Transaction:  uuid.New().String(), // Генерируем уникальный идентификатор
-		RequestID:    uuid.New().String(), // Генерируем уникальный идентификатор
-		Currency:     currency,
-		Provider:     randomString(6),
-		Amount:       float64(rand.Intn(10000)),
-		PaymentDT:    int(time.Now().Unix()),
-		Bank:         randomString(6),
-		DeliveryCost: float64(rand.Intn(500)),
-		GoodsTotal:   float64(rand.Intn(10000)),
-		CustomFee:    float64(rand.Intn(100)),
-	}
-
-	localies := []string{"en", "ru"}
-	locale := localies[rand.Intn(len(localies))]
 	order := models.Order{
-		OrderUID:          uuid.New().String(), // Используем UUID для OrderUID
+		OrderUID:          uuid.New().String(),
 		TrackNumber:       randomString(10),
 		Entry:             randomString(5),
 		Delivery:          delivery,
@@ -67,6 +31,57 @@ func GenerateOrder() models.Order {
 		OofShard:          randomString(4),
 	}
 	return order
+}
+
+func generateDelivery() models.Delivery {
+	return models.Delivery{
+		Name:    randomString(10),
+		Phone:   randomPhone(),
+		Zip:     randomZip(),
+		City:    randomString(8),
+		Address: randomString(15),
+		Region:  randomString(8),
+		Email:   randomString(5) + "@example.com",
+	}
+}
+
+func generateItem() models.Item {
+	return models.Item{
+		ChrtID:      rand.Intn(1000),
+		TrackNumber: randomString(10),
+		Price:       float64(rand.Intn(1000)),
+		Rid:         randomString(6),
+		Name:        randomString(10),
+		Sale:        float64(rand.Intn(100)),
+		Size:        randomSize(),
+		TotalPrice:  float64(rand.Intn(1000)),
+		NmID:        rand.Intn(1000),
+		Brand:       randomString(8),
+		Status:      rand.Intn(5),
+	}
+}
+
+func generatePayment() models.Payment {
+	currencies := []string{"USD", "RUB", "EUR"}
+	currency := currencies[rand.Intn(len(currencies))]
+
+	return models.Payment{
+		Transaction:  uuid.New().String(),
+		RequestID:    uuid.New().String(),
+		Currency:     currency,
+		Provider:     randomString(6),
+		Amount:       float64(rand.Intn(10000)),
+		PaymentDT:    int(time.Now().Unix()),
+		Bank:         randomString(6),
+		DeliveryCost: float64(rand.Intn(500)),
+		GoodsTotal:   float64(rand.Intn(10000)),
+		CustomFee:    float64(rand.Intn(100)),
+	}
+}
+
+func generateLocale() string {
+	locales := []string{"en", "ru"}
+	return locales[rand.Intn(len(locales))]
 }
 
 func randomString(length int) string {

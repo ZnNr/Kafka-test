@@ -4,9 +4,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/IBM/sarama"
+	"github.com/ZnNr/WB-test-L0/internal/order_gen"
 	"github.com/ZnNr/WB-test-L0/internal/repository"
 	"github.com/ZnNr/WB-test-L0/internal/repository/config"
-	"github.com/ZnNr/WB-test-L0/script"
 	"log"
 	"strconv"
 )
@@ -40,7 +40,8 @@ func main() {
 	if err != nil {
 		log.Fatalf("Failed to get old orders from DB: %v", err)
 	}
-
+	// Логи загруженных заказов
+	log.Printf("Loaded %d orders from the database", len(orders))
 	// Подключаемся к Kafka
 	brokers := cfg.Kafka.Brokers // Предполагаем, что конфигурация содержит список брокеров
 	producer, err := ConnectProducer(brokers)
@@ -70,7 +71,7 @@ func main() {
 		}
 
 		if input == "s" {
-			orderGenerated := script.GenerateOrder()
+			orderGenerated := order_gen.GenerateOrder()
 			orderJSON, err = json.Marshal(orderGenerated)
 			if err != nil {
 				log.Printf("Failed to convert order to JSON: %s", err)
@@ -79,7 +80,11 @@ func main() {
 		}
 
 		if input == "c" {
-			log.Println("Choose 1 of old orders:")
+			if len(orders) == 0 {
+				log.Println("No orders available to select.")
+				continue
+			}
+			log.Println("Choose one of old orders:")
 			for i := 0; i < len(orders); i++ {
 				fmt.Println(i, orders[i].OrderUID)
 			}

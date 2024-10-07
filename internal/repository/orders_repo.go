@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+
 	"github.com/ZnNr/WB-test-L0/internal/models"
 	"github.com/ZnNr/WB-test-L0/internal/repository/config"
 	"github.com/ZnNr/WB-test-L0/internal/repository/database"
@@ -45,8 +46,8 @@ func (o *OrdersRepo) OrderExists(orderUID string) (bool, error) {
 	}
 	return exists, nil
 }
-
 func (o *OrdersRepo) AddOrder(order models.Order) error {
+	// существует ли заказ?
 	exists, err := o.OrderExists(order.OrderUID)
 	if err != nil {
 		return fmt.Errorf("failed to check if order exists: %w", err)
@@ -56,64 +57,55 @@ func (o *OrdersRepo) AddOrder(order models.Order) error {
 		return fmt.Errorf("order with order_uid %s already exists", order.OrderUID)
 	}
 
-	tx, err := o.DB.Begin()
-	if err != nil {
-		return fmt.Errorf("failed to begin transaction: %w", err)
-	}
-	defer tx.Rollback() // Rollback if commit does not happen.
-
-	_, err = tx.Exec(addOrderQuery, order.OrderUID, order.TrackNumber, order.Entry, order.Locale,
+	// Вставляем заказ в базу данных
+	_, err = o.DB.Exec(addOrderQuery, order.OrderUID, order.TrackNumber, order.Entry, order.Locale,
 		order.InternalSignature, order.CustomerID, order.DeliveryService, order.Shardkey,
 		order.SmID, order.DateCreated, order.OofShard)
 	if err != nil {
 		return fmt.Errorf("failed to insert order: %w", err)
 	}
 
-	// Payment existence check and insertion.
-	if err := o.processPayment(tx, order); err != nil {
-		return err
+	// Проверка существования платежа и добавление при необходимости.
+	if err := o.processPayment(order); err != nil {
+		return fmt.Errorf("failed to process payment: %w", err)
 	}
 
-	if err := database.AddItems(tx, order.Items, order.OrderUID); err != nil {
+	// Добавление предметов заказа
+	if err := database.AddItems(o.DB, order.Items, order.OrderUID); err != nil {
 		return fmt.Errorf("failed to insert items: %w", err)
 	}
 
-	if err := database.AddDelivery(tx, order.Delivery, order.OrderUID); err != nil {
+	// Добавление доставки
+	statusMessage, err := database.AddDelivery(o.DB, order.Delivery, order.OrderUID)
+	if err != nil {
 		return fmt.Errorf("failed to insert delivery: %w", err)
 	}
 
-	if err := tx.Commit(); err != nil {
-		return fmt.Errorf("failed to commit transaction: %w", err)
-	}
+	fmt.Println(statusMessage)
 
 	return nil
 }
 
-// processPayment checks if the payment exists and adds a new payment record if it doesn't.
-func (o *OrdersRepo) processPayment(tx *sql.Tx, order models.Order) error {
-	exists, err := database.PaymentExists(tx, order.OrderUID)
+// processPayment проверяет существование платежа и добавляет новый, если его нет.
+func (o *OrdersRepo) processPayment(order models.Order) error {
+	exists, err := database.PaymentExists(o.DB, order.OrderUID)
 	if err != nil {
 		return fmt.Errorf("failed to check if payment exists: %w", err)
 	}
 
 	if !exists {
-		if err := database.AddPayment(tx, order.Payment, order.OrderUID); err != nil {
+		if err := database.AddPayment(o.DB, order.Payment, order.OrderUID); err != nil {
 			return fmt.Errorf("failed to insert payment: %w", err)
 		}
 	}
-	// Future logic for updating an existing payment can be added here.
 
 	return nil
 }
+
 func (o *OrdersRepo) GetOrder(orderUID string) (*models.Order, error) {
 	var order models.Order
-	tx, err := o.DB.Begin()
-	if err != nil {
-		return nil, fmt.Errorf("failed to begin transaction: %w", err)
-	}
-	defer tx.Rollback()
 
-	if err := tx.QueryRow(getOrderQuery, orderUID).Scan(&order.OrderUID,
+	if err := o.DB.QueryRow(getOrderQuery, orderUID).Scan(&order.OrderUID,
 		&order.TrackNumber, &order.Entry, &order.Locale, &order.InternalSignature,
 		&order.CustomerID, &order.DeliveryService, &order.Shardkey, &order.SmID,
 		&order.DateCreated, &order.OofShard); err != nil {
@@ -124,30 +116,27 @@ func (o *OrdersRepo) GetOrder(orderUID string) (*models.Order, error) {
 		return nil, fmt.Errorf("failed to get order: %w", err)
 	}
 
-	if err := populateOrderDetails(tx, &order); err != nil { // Передайте транзакцию
+	if err := populateOrderDetails(o.DB, &order); err != nil { // Изменено здесь
 		return nil, fmt.Errorf("failed to populate order details: %w", err)
-	}
-
-	if err := tx.Commit(); err != nil {
-		return nil, fmt.Errorf("failed to commit transaction: %w", err)
 	}
 
 	return &order, nil
 }
-func populateOrderDetails(tx *sql.Tx, order *models.Order) error {
-	delivery, err := database.GetDelivery(tx, order.OrderUID)
+
+func populateOrderDetails(db *sql.DB, order *models.Order) error {
+	delivery, err := database.GetDelivery(db, order.OrderUID)
 	if err != nil {
 		return err
 	}
 	order.Delivery = *delivery
 
-	payment, err := database.GetPayment(tx, order.OrderUID) // Уже правильно
+	payment, err := database.GetPayment(db, order.OrderUID)
 	if err != nil {
 		return err
 	}
 	order.Payment = *payment
 
-	items, err := database.GetItems(tx, order.OrderUID) // Уже правильно
+	items, err := database.GetItems(db, order.OrderUID)
 	if err != nil {
 		return err
 	}
@@ -157,13 +146,7 @@ func populateOrderDetails(tx *sql.Tx, order *models.Order) error {
 }
 
 func (o *OrdersRepo) GetOrders() ([]models.Order, error) {
-	tx, err := o.DB.Begin()
-	if err != nil {
-		return nil, fmt.Errorf("failed to begin transaction: %w", err)
-	}
-	defer tx.Rollback()
-
-	rows, err := tx.Query(getAllOrdersQuery)
+	rows, err := o.DB.Query(getAllOrdersQuery)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get orders: %w", err)
 	}
@@ -178,15 +161,11 @@ func (o *OrdersRepo) GetOrders() ([]models.Order, error) {
 			return nil, fmt.Errorf("failed to scan order row: %w", err)
 		}
 
-		if err := populateOrderDetails(tx, &order); err != nil { // Передайте транзакцию
+		if err := populateOrderDetails(o.DB, &order); err != nil { // Изменено здесь
 			return nil, fmt.Errorf("failed to get details for order %s: %w", order.OrderUID, err)
 		}
 
 		orders = append(orders, order)
-	}
-
-	if err := tx.Commit(); err != nil {
-		return nil, fmt.Errorf("failed to commit transaction: %w", err)
 	}
 
 	return orders, nil

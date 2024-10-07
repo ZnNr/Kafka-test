@@ -20,25 +20,22 @@ const (
         address = EXCLUDED.address,
         region = EXCLUDED.region,
         email = EXCLUDED.email
-    RETURNING order_uid` // Возвращаем order_uid после вставки/обновления
+    RETURNING order_uid`
 
-	getDeliveryQuery = `SELECT order_uid, name, phone, zip, city, address, region, email FROM deliveries WHERE order_uid = $1`
+	getDeliveryQuery = `SELECT * FROM deliveries WHERE order_uid = $1`
 )
 
-func AddDelivery(tx *sql.Tx, delivery models.Delivery, orderUID string) error {
+func AddDelivery(db *sql.DB, delivery models.Delivery, orderUID string) (string, error) {
 	// Проверяем, существует ли доставка с данным order_uid
-	existingDelivery, err := GetDelivery(tx, orderUID)
+	existingDelivery, err := GetDelivery(db, orderUID)
 	if err != nil && !errors.Is(err, sql.ErrNoRows) {
-		return fmt.Errorf("could not get delivery: %w", err)
+		return "", fmt.Errorf("не удалось получить доставку: %w", err)
 	}
 
-	if existingDelivery != nil {
-		return fmt.Errorf("delivery with order_uid %s already exists", orderUID)
-	}
-
-	// Вставляем новую доставку или обновляем
+	var operationMessage string
 	var returnedOrderUID string
-	err = tx.QueryRow(
+
+	err = db.QueryRow(
 		addDeliveryQuery,
 		delivery.Name,
 		delivery.Phone,
@@ -51,19 +48,26 @@ func AddDelivery(tx *sql.Tx, delivery models.Delivery, orderUID string) error {
 	).Scan(&returnedOrderUID)
 
 	if err != nil {
-		return fmt.Errorf("failed to insert delivery: %w", err)
+		return "", fmt.Errorf("failed to insert/update delivery: %w", err)
 	}
 
-	fmt.Printf("Inserted/Updated delivery with order_uid: %s\n", returnedOrderUID)
-	return nil
+	if existingDelivery != nil {
+		// Если существующая доставка найдена
+		operationMessage = fmt.Sprintf("Доставка с order_uid %s успешно обновлена", returnedOrderUID)
+	} else {
+		// Если доставка новая
+		operationMessage = fmt.Sprintf("Создана новая доставка с order_uid %s", returnedOrderUID)
+	}
+
+	return operationMessage, nil
 }
 
-func GetDelivery(tx *sql.Tx, orderUID string) (*models.Delivery, error) {
-	row := tx.QueryRow(getDeliveryQuery, orderUID)
+func GetDelivery(db *sql.DB, orderUID string) (*models.Delivery, error) {
+	row := db.QueryRow(getDeliveryQuery, orderUID)
 
 	var delivery models.Delivery
 	err := row.Scan(
-		&delivery.OrderUID, // Убедитесь, что OrderUID присутствует в модели
+		&delivery.OrderUID,
 		&delivery.Name,
 		&delivery.Phone,
 		&delivery.Zip,
@@ -72,14 +76,13 @@ func GetDelivery(tx *sql.Tx, orderUID string) (*models.Delivery, error) {
 		&delivery.Region,
 		&delivery.Email,
 	)
-	fmt.Printf("Executing query: %s with orderUID: %s\n", getDeliveryQuery, orderUID)
+
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, nil // Запись не найдена
 		}
-		return nil, fmt.Errorf("get delivery failed: %w", err)
+		return nil, fmt.Errorf("failed to get delivery: %w", err)
 	}
 
-	fmt.Printf("Scanned delivery: %+v\n", delivery)
 	return &delivery, nil
 }

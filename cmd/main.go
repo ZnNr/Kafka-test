@@ -3,10 +3,10 @@ package main
 import (
 	"context"
 	"github.com/ZnNr/WB-test-L0/internal/cache"
+	"github.com/ZnNr/WB-test-L0/internal/consumer"
 	"github.com/ZnNr/WB-test-L0/internal/controller/server"
 	"github.com/ZnNr/WB-test-L0/internal/repository"
 	"github.com/ZnNr/WB-test-L0/internal/repository/config"
-	"github.com/ZnNr/WB-test-L0/kafka/consumer"
 	"github.com/ZnNr/WB-test-L0/migration"
 	"go.uber.org/zap"
 	"log"

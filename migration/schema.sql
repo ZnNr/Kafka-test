@@ -63,4 +63,3 @@ CREATE TABLE IF NOT EXISTS items
     status       INTEGER
 );
 
-SELECT order_uid, name, phone, zip, city, address, region, email FROM deliveries WHERE order_uid = '811921f9-30c4-456c-b786-1aed9dcfce42';
